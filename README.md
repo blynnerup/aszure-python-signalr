@@ -1,4 +1,4 @@
-# aszure-python-signalr
+# azure-python-signalr
 A selfhosted client which uses Azure Function endpoints to get requests form the client and then uses a SignalR service to send replies back.
 
 ## Setup
