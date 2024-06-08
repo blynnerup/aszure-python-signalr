@@ -38,7 +38,7 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     }))
     return "ok"
 
-@app.function_name(name="Mockquery")
+@app.function_name(name="mock_query")
 @app.route(route="req")
 @app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
 def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
@@ -53,6 +53,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     })
     funcUrl = "http://localhost:7071/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
+    logging.info(f"waiting for {waitTime1}")
     time.sleep(waitTime1)
 
     json_data = json.dumps({
@@ -60,10 +61,20 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     })
     funcUrl = "http://localhost:7071/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
+    logging.info(f"waiting for {waitTime2}")
     time.sleep(waitTime2)
 
     signalRMessages.set(json.dumps({
         'target': 'newMessage',
         'arguments': ['this is a newer message']
     }))
-    return "ok"
+    return "Query complete"
+
+# def main(req: func.HttpRequest, signalROutput: func.Out[str]) -> func.HttpResponse:
+#     message = req.get_json()
+#     signalROutput.set(json.dumps({
+#         #message will only be sent to this user ID
+#         'userId': 'userId1',
+#         'target': 'newMessage',
+#         'arguments': [ message ]
+#     }))
