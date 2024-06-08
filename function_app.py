@@ -7,11 +7,6 @@ import requests
 
 app = func.FunctionApp()
 
-etag = ''
-start_count = 0
-counter = 1
-
-
 @app.route(route="index", auth_level=func.AuthLevel.ANONYMOUS)
 def index(req: func.HttpRequest) -> func.HttpResponse:
     f = open(os.path.dirname(os.path.realpath(__file__)) + '/content/index.html')
@@ -24,7 +19,7 @@ def negotiate(req: func.HttpRequest, connectionInfo) -> func.HttpResponse:
     return func.HttpResponse(connectionInfo)
 
 @app.function_name(name="send_status")
-@app.route(route="send_status")
+@app.route(route="send_status", auth_level=func.AuthLevel.ANONYMOUS)
 @app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
 def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     """
@@ -39,7 +34,7 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     return "ok"
 
 @app.function_name(name="mock_query")
-@app.route(route="req")
+@app.route(route="req", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
 def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     # req_body = req.get_json()
@@ -70,11 +65,16 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     }))
     return "Query complete"
 
-# def main(req: func.HttpRequest, signalROutput: func.Out[str]) -> func.HttpResponse:
-#     message = req.get_json()
-#     signalROutput.set(json.dumps({
-#         #message will only be sent to this user ID
-#         'userId': 'userId1',
-#         'target': 'newMessage',
-#         'arguments': [ message ]
-#     }))
+@app.function_name(name="send_to_user")
+@app.route(route="send_to_user", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
+@app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
+def main(req: func.HttpRequest, signalROutput: func.Out[str]) -> func.HttpResponse:
+    body_json = req.get_json()
+    userId = body_json.get('userId')
+    message = f"Hello userId {userId}, this is for you only."
+    signalROutput.set(json.dumps({
+        #message will only be sent to this user ID
+        'userId': userId,
+        'target': 'newMessage',
+        'arguments': [ message ]
+    }))
