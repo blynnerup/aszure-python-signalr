@@ -26,10 +26,10 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     Sends status to SignalR
     """
     req_body = req.get_json()
-    status = req_body.get('target')
+    status = req_body.get('status')
     signalRMessages.set(json.dumps({
         'target': 'newMessage',
-        'arguments': ['this is a status message']
+        'arguments': ['Status: ' + status]
     }))
     return "ok"
 
@@ -47,6 +47,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'status': 'Query started'
     })
     funcUrl = "http://localhost:7071/api/send_status"
+    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(f"waiting for {waitTime1}")
     time.sleep(waitTime1)
@@ -55,6 +56,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'status': 'Getting sources'
     })
     funcUrl = "http://localhost:7071/api/send_status"
+    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status" 
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(f"waiting for {waitTime2}")
     time.sleep(waitTime2)
@@ -68,11 +70,11 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
 @app.function_name(name="send_to_user")
 @app.route(route="send_to_user", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
-def main(req: func.HttpRequest, signalROutput: func.Out[str]) -> func.HttpResponse:
+def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResponse:
     body_json = req.get_json()
     userId = body_json.get('userId')
     message = f"Hello userId {userId}, this is for you only."
-    signalROutput.set(json.dumps({
+    signalRMessages.set(json.dumps({
         #message will only be sent to this user ID
         'userId': userId,
         'target': 'newMessage',

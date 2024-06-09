@@ -13,7 +13,7 @@ In order to make the Azure Function run locally we use [Azurite](https://learn.m
 Once the setup is complete the solution is ready to run.
 
 ## Function endpoints.
-The app has three functions endpoints `index`, `negotiate` and `modify_message`.
+<!-- The app has three functions endpoints `index`, `negotiate` and `modify_message`.
 1. Run the `index` function first, this will serve the web client
 2. Run the `negotiate` function second, this will initialize a connection between SignalR and the web client.
 3. Finally call the `modify_message` endpoint. This can be done using a program like Postman to make a POST call to the endpoint. The function expoects a json object with a `message`. See example below
@@ -24,4 +24,24 @@ The app has three functions endpoints `index`, `negotiate` and `modify_message`.
 }
 ```
 
-If all works correctly you should now see `Message received and broadcasted: !dlrow ,olleH` in Postman and the webpage will have a div with the reversed `message` text inside.
+If all works correctly you should now see `Message received and broadcasted: !dlrow ,olleH` in Postman and the webpage will have a div with the reversed `message` text inside. -->
+
+All endpoints expect body user input in json format (unless none stated). All endpoints return to `'target': 'newMessage'` (newMessage).
+The app has the following endpoints;
+
+1. `negotitate` - Initializes the connection with SignalR and the client.
+2. `mock_query` - (Broadcast) Simulates program execution, waits two programmatically set times. Wait time is in seconds. Before each wait a status message is returned to all clients.
+```
+{
+    "wait1": <wait in seconds>,
+    "wait2": <wait in seconds>
+}
+```
+3. `send_to_user` - (Single User) Sends a message to a single user based the id created in the SignalR setup. Returns a simple string `"Hello userId {userId}, this is for you only."` 
+```
+{
+    "userId": <userId>
+}
+```
+
+4. `send_status` - "Private" endpoint used for sending out status messages with SignalR.
