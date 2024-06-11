@@ -50,7 +50,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'status': 'Query started'
     })
     # funcUrl = "http://localhost:7071/api/send_status
-    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
+    funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(response)
     logging.info(f"waiting for {waitTime1}")
