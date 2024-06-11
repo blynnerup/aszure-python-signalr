@@ -49,8 +49,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'target': 'status1',
         'status': 'Query started'
     })
-    # funcUrl = "http://localhost:7071/api/send_status
-    funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
+    funcUrl = os.environ.BaseUrlBlp + "send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(response)
     logging.info(f"waiting for {waitTime1}")
@@ -60,8 +59,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'target': 'status2',
         'status': 'Getting sources'
     })
-    # funcUrl = "http://localhost:7071/api/send_status"
-    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
+    funcUrl = os.environ.BaseUrlBlp + "send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(f"waiting for {waitTime2}")
     time.sleep(waitTime2)
