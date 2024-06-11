@@ -25,6 +25,7 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     """
     Sends status to SignalR
     """
+    logging.info("Starting send_status")
     req_body = req.get_json()
     status = req_body.get('status')
     signalRMessages.set(json.dumps({
@@ -34,36 +35,40 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     return "ok"
 
 @app.function_name(name="mock_query")
-@app.route(route="req", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
+@app.route(route="mock_query", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
 def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     # req_body = req.get_json()
     # user = req_body.get('user')
     # user = req.params.get("user")
+    logging.info("Starting mock")
     req_body = req.get_json()
-    waitTime1 = req_body.get('wait1')
-    waitTime2 = req_body.get('wait2')
+    waitTime1 = int(req_body.get('wait1'))
+    waitTime2 = int(req_body.get('wait2'))
     json_data = json.dumps({
+        'target': 'status1',
         'status': 'Query started'
     })
-    funcUrl = "http://localhost:7071/api/send_status"
+    # funcUrl = "http://localhost:7071/api/send_status
     # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
+    logging.info(response)
     logging.info(f"waiting for {waitTime1}")
     time.sleep(waitTime1)
 
     json_data = json.dumps({
+        'target': 'status2',
         'status': 'Getting sources'
     })
-    funcUrl = "http://localhost:7071/api/send_status"
-    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status" 
+    # funcUrl = "http://localhost:7071/api/send_status"
+    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(f"waiting for {waitTime2}")
     time.sleep(waitTime2)
 
     signalRMessages.set(json.dumps({
         'target': 'newMessage',
-        'arguments': ['this is a newer message']
+        'arguments': ['Query complete']
     }))
     return "Query complete"
 

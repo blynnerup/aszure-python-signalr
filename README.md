@@ -29,19 +29,20 @@ If all works correctly you should now see `Message received and broadcasted: !dl
 All endpoints expect body user input in json format (unless none stated). All endpoints return to `'target': 'newMessage'` (newMessage).
 The app has the following endpoints;
 
-1. `negotitate` - Initializes the connection with SignalR and the client.
-2. `mock_query` - (Broadcast) Simulates program execution, waits two programmatically set times. Wait time is in seconds. Before each wait a status message is returned to all clients.
+1. `index` -  Launches the selfhosted website which displays messages from SignalR using the `mock_query` method.
+2. `mock_query` - `["POST"]` (Broadcast) Simulates program execution, waits two programmatically set times. Wait time is in seconds. Before each wait a status message is returned to all clients.
 ```
 {
-    "wait1": <wait in seconds>,
-    "wait2": <wait in seconds>
+    "wait1": "<wait in seconds>",
+    "wait2": "<wait in seconds>"
 }
 ```
 3. `send_to_user` - (Single User) Sends a message to a single user based the id created in the SignalR setup. Returns a simple string `"Hello userId {userId}, this is for you only."` 
 ```
 {
-    "userId": <userId>
+    "userId": "<userId>"
 }
 ```
 
 4. `send_status` - "Private" endpoint used for sending out status messages with SignalR.
+5. `negotitate` - `["POST"]` Initializes the connection with SignalR and the client.
