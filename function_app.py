@@ -7,11 +7,13 @@ import requests
 
 app = func.FunctionApp()
 
+@app.function_name(name="index")
 @app.route(route="index", auth_level=func.AuthLevel.ANONYMOUS)
 def index(req: func.HttpRequest) -> func.HttpResponse:
     f = open(os.path.dirname(os.path.realpath(__file__)) + '/content/index.html')
     return func.HttpResponse(f.read(), mimetype='text/html')
 
+@app.function_name(name="negotiate")
 @app.route(route="negotiate", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_input_binding(arg_name="connectionInfo", type="signalRConnectionInfo", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
 def negotiate(req: func.HttpRequest, connectionInfo) -> func.HttpResponse:
@@ -71,7 +73,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     return "Query complete"
 
 @app.function_name(name="send_to_user")
-@app.route(route="send_to_user", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
+@app.route(route="send-to-user", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
 def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResponse:
     body_json = req.get_json()
@@ -83,3 +85,32 @@ def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResp
         'target': 'newMessage',
         'arguments': [ message ]
     }))
+
+@app.function_name(name="save-query")
+@app.route(route="save-query")
+@app.cosmos_db_output(
+    arg_name="outputDocument",
+    database_name="ToDoList", 
+    container_name="Queries", 
+    connection="CosmosDbConnectionSetting")
+def test_function(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -> func.HttpResponse:
+     logging.info('Python HTTP trigger function processed a request.')
+     logging.info('Python Cosmos DB trigger function processed a request.')
+     name = req.params.get('name')
+     if not name:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            name = req_body.get('name')
+
+     if name:
+        outputDocument.set(func.Document.from_dict({"id": name}))
+        # msg.set(name)
+        return func.HttpResponse(f"Hello {name}!")
+     else:
+        return func.HttpResponse(
+                    "Please pass a name on the query string or in the request body",
+                    status_code=400
+                )
