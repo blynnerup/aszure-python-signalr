@@ -4,8 +4,12 @@ import json
 import logging
 import time
 import requests
+import uuid
+from azure.search.documents import SearchClient
+from azure.core.credentials import AzureKeyCredential
 
 app = func.FunctionApp()
+statusFuncUrl = "http://localhost:7071/api/send_status" 
 
 @app.function_name(name="index")
 @app.route(route="index", auth_level=func.AuthLevel.ANONYMOUS)
@@ -51,7 +55,9 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'target': 'status1',
         'status': 'Query started'
     })
-    funcUrl = os.environ.BaseUrlBlp + "send_status"
+    # funcUrl = os.environ.BaseUrlBlp + "send_status"
+    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/" + "send_status"
+    funcUrl = "http://localhost:7071/api/send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(response)
     logging.info(f"waiting for {waitTime1}")
@@ -61,7 +67,6 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'target': 'status2',
         'status': 'Getting sources'
     })
-    funcUrl = os.environ.BaseUrlBlp + "send_status"
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(f"waiting for {waitTime2}")
     time.sleep(waitTime2)
@@ -86,6 +91,56 @@ def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResp
         'arguments': [ message ]
     }))
 
+@app.function_name(name="post-query")
+@app.route(route="post-query", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
+@app.cosmos_db_output(
+    arg_name="outputDocument",
+    database_name="QueriesDb",
+    container_name="NewQueries",
+    connection="CosmosDbConnectionSetting")
+def send_query(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -> func.HttpResponse:
+    logging.info('Python HTTP trigger function "send-query" processed a request.')
+    
+    req_body = req.get_json()
+    userId = req_body.get('userId')
+    query = req_body.get('query')
+    docId = uuid.uuid4()
+    str_doc_id = docId.hex
+
+    json_data = json.dumps({
+        'status': f'Creating document; UserId: {userId} - Query: {query}'
+    })
+
+    response = requests.post(url=statusFuncUrl, data=json_data)
+    logging.info(response)
+
+    outputDocument.set(func.Document.from_dict({"id": str_doc_id, "userId": userId, "query": query}))
+
+    #Query AI
+    searchUrl = "https://olga-search-tst.search.windows.net"
+    key = os.environ["SearchKey"]
+    credential = AzureKeyCredential(key)
+    index_name = "documents-index"
+
+    search_client = SearchClient(searchUrl, index_name, credential=credential)
+    results = search_client.search(search_text="hvidvask", top=1)
+    # doc = search_client.get_document("aHR0cHM6Ly9vbGdhc3RvcmFnZXRzdC5ibG9iLmNvcmUud2luZG93cy5uZXQvZG9jdW1lbnRzL1BIL0t2YWxpdGV0c3N0eXJpbmcvQWNjZXB0X3JlYWNjZXB0JTIwYWYlMjBrdW5kZXIvR3VpZGUlMjB0aWwlMjBrdW5kZWFjY2VwdGVyLnBkZg2")
+
+    for result in results:
+        encoded_path = result['metadata_storage_path']
+        # decoded_bytes = base64.b64decode(encoded_path)
+        # decoded_path = decoded_bytes('utf-8')
+        logging.info(f"Content: {result['content']}")
+        json_content_data = json.dumps({
+            'status': result['content']
+        })
+        _ = requests.post(url=statusFuncUrl, data=json_content_data)
+
+    return func.HttpResponse(
+        "Query sent"
+    )
+
+[DeprecationWarning("This is obsolete use post-query")]
 @app.function_name(name="save-query")
 @app.route(route="save-query")
 @app.cosmos_db_output(
@@ -94,23 +149,39 @@ def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResp
     container_name="Queries", 
     connection="CosmosDbConnectionSetting")
 def test_function(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -> func.HttpResponse:
-     logging.info('Python HTTP trigger function processed a request.')
-     logging.info('Python Cosmos DB trigger function processed a request.')
-     name = req.params.get('name')
-     if not name:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            name = req_body.get('name')
+    logging.info('Python HTTP trigger function processed a request.')
+    logging.info('Python Cosmos DB trigger function processed a request.')
+    
+    req_body = req.get_json()
+    userId = req_body.get('userId') 
+    query = req_body.get('query')
 
-     if name:
-        outputDocument.set(func.Document.from_dict({"id": name}))
-        # msg.set(name)
-        return func.HttpResponse(f"Hello {name}!")
-     else:
-        return func.HttpResponse(
-                    "Please pass a name on the query string or in the request body",
-                    status_code=400
-                )
+    json_data = json.dumps({
+        'status': f'This was passed in ID: {userId} - Query {query}'
+    })
+    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/" + "send_status"
+    funcUrl = "http://localhost:7071/api/send_status" 
+    response = requests.post(url=funcUrl, data=json_data)
+    logging.info(response)
+
+    return func.HttpResponse(
+        "Query sent",
+        status_code=200)
+    #  name = req.params.get('name')
+    #  if not name:
+    #     try:
+    #         req_body = req.get_json()
+    #     except ValueError:
+    #         pass
+    #     else:
+    #         name = req_body.get('name')
+
+    #  if name:
+    #     outputDocument.set(func.Document.from_dict({"id": name}))
+    #     # msg.set(name)
+    #     return func.HttpResponse(f"Hello {name}!")
+    #  else:
+    #     return func.HttpResponse(
+    #                 "Please pass a name on the query string or in the request body",
+    #                 status_code=400
+    #             )
