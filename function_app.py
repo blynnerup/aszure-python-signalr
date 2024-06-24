@@ -9,7 +9,8 @@ from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
 
 app = func.FunctionApp()
-statusFuncUrl = "http://localhost:7071/api/send_status" 
+
+StatusFuncUrl = os.environ["StatusFuncUrl"]
 
 @app.function_name(name="index")
 @app.route(route="index", auth_level=func.AuthLevel.ANONYMOUS)
@@ -19,14 +20,22 @@ def index(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.function_name(name="negotiate")
 @app.route(route="negotiate", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
-@app.generic_input_binding(arg_name="connectionInfo", type="signalRConnectionInfo", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
+@app.generic_input_binding(
+    arg_name="connectionInfo", 
+    type="signalRConnectionInfo", 
+    hubName="bdotstsignal", 
+    connectionStringSetting="AzureSignalRConnectionString")
 def negotiate(req: func.HttpRequest, connectionInfo) -> func.HttpResponse:
     logging.info(f"connectionInfo: {connectionInfo}")
     return func.HttpResponse(connectionInfo)
 
 @app.function_name(name="send_status")
 @app.route(route="send_status", auth_level=func.AuthLevel.ANONYMOUS)
-@app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
+@app.generic_output_binding(
+    arg_name="signalRMessages", 
+    type="signalR", 
+    hubName="bdotstsignal", 
+    connectionStringSetting="AzureSignalRConnectionString")
 def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     """
     Sends status to SignalR
@@ -42,11 +51,11 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
 
 @app.function_name(name="mock_query")
 @app.route(route="mock_query", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
-@app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
+@app.generic_output_binding(
+    arg_name="signalRMessages", 
+    type="signalR", hubName="bdotstsignal", 
+    connectionStringSetting="AzureSignalRConnectionString")
 def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
-    # req_body = req.get_json()
-    # user = req_body.get('user')
-    # user = req.params.get("user")
     logging.info("Starting mock")
     req_body = req.get_json()
     waitTime1 = int(req_body.get('wait1'))
@@ -55,9 +64,8 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
         'target': 'status1',
         'status': 'Query started'
     })
-    # funcUrl = os.environ.BaseUrlBlp + "send_status"
-    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/" + "send_status"
-    funcUrl = "http://localhost:7071/api/send_status"
+
+    funcUrl = StatusFuncUrl
     response = requests.post(url=funcUrl, data=json_data)
     logging.info(response)
     logging.info(f"waiting for {waitTime1}")
@@ -79,7 +87,11 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
 
 @app.function_name(name="send_to_user")
 @app.route(route="send-to-user", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
-@app.generic_output_binding(arg_name="signalRMessages", type="signalR", hubName="bdotstsignal", connectionStringSetting="AzureSignalRConnectionString")
+@app.generic_output_binding(
+    arg_name="signalRMessages",
+    type="signalR", 
+    hubName="bdotstsignal", 
+    connectionStringSetting="AzureSignalRConnectionString")
 def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResponse:
     body_json = req.get_json()
     userId = body_json.get('userId')
@@ -98,7 +110,7 @@ def main(req: func.HttpRequest, signalRMessages: func.Out[str]) -> func.HttpResp
     database_name="QueriesDb",
     container_name="NewQueries",
     connection="CosmosDbConnectionSetting")
-def send_query(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -> func.HttpResponse:
+def posts_query(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -> func.HttpResponse:
     logging.info('Python HTTP trigger function "send-query" processed a request.')
     
     req_body = req.get_json()
@@ -111,77 +123,28 @@ def send_query(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -
         'status': f'Creating document; UserId: {userId} - Query: {query}'
     })
 
-    response = requests.post(url=statusFuncUrl, data=json_data)
+    response = requests.post(url=StatusFuncUrl, data=json_data)
     logging.info(response)
 
     outputDocument.set(func.Document.from_dict({"id": str_doc_id, "userId": userId, "query": query}))
 
     #Query AI
-    searchUrl = "https://olga-search-tst.search.windows.net"
+    searchUrl = os.environ["SearchUrl"]
     key = os.environ["SearchKey"]
     credential = AzureKeyCredential(key)
     index_name = "documents-index"
 
     search_client = SearchClient(searchUrl, index_name, credential=credential)
-    results = search_client.search(search_text="hvidvask", top=1)
-    # doc = search_client.get_document("aHR0cHM6Ly9vbGdhc3RvcmFnZXRzdC5ibG9iLmNvcmUud2luZG93cy5uZXQvZG9jdW1lbnRzL1BIL0t2YWxpdGV0c3N0eXJpbmcvQWNjZXB0X3JlYWNjZXB0JTIwYWYlMjBrdW5kZXIvR3VpZGUlMjB0aWwlMjBrdW5kZWFjY2VwdGVyLnBkZg2")
+    results = search_client.search(search_text=query, top=1)
 
     for result in results:
         encoded_path = result['metadata_storage_path']
-        # decoded_bytes = base64.b64decode(encoded_path)
-        # decoded_path = decoded_bytes('utf-8')
         logging.info(f"Content: {result['content']}")
         json_content_data = json.dumps({
             'status': result['content']
         })
-        _ = requests.post(url=statusFuncUrl, data=json_content_data)
+        _ = requests.post(url=StatusFuncUrl, data=json_content_data)
 
     return func.HttpResponse(
         "Query sent"
     )
-
-[DeprecationWarning("This is obsolete use post-query")]
-@app.function_name(name="save-query")
-@app.route(route="save-query")
-@app.cosmos_db_output(
-    arg_name="outputDocument",
-    database_name="ToDoList", 
-    container_name="Queries", 
-    connection="CosmosDbConnectionSetting")
-def test_function(req: func.HttpRequest, outputDocument: func.Out[func.Document]) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
-    logging.info('Python Cosmos DB trigger function processed a request.')
-    
-    req_body = req.get_json()
-    userId = req_body.get('userId') 
-    query = req_body.get('query')
-
-    json_data = json.dumps({
-        'status': f'This was passed in ID: {userId} - Query {query}'
-    })
-    # funcUrl = "https://bdo-blp-functst2.azurewebsites.net/api/" + "send_status"
-    funcUrl = "http://localhost:7071/api/send_status" 
-    response = requests.post(url=funcUrl, data=json_data)
-    logging.info(response)
-
-    return func.HttpResponse(
-        "Query sent",
-        status_code=200)
-    #  name = req.params.get('name')
-    #  if not name:
-    #     try:
-    #         req_body = req.get_json()
-    #     except ValueError:
-    #         pass
-    #     else:
-    #         name = req_body.get('name')
-
-    #  if name:
-    #     outputDocument.set(func.Document.from_dict({"id": name}))
-    #     # msg.set(name)
-    #     return func.HttpResponse(f"Hello {name}!")
-    #  else:
-    #     return func.HttpResponse(
-    #                 "Please pass a name on the query string or in the request body",
-    #                 status_code=400
-    #             )
