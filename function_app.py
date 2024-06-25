@@ -29,8 +29,8 @@ def negotiate(req: func.HttpRequest, connectionInfo) -> func.HttpResponse:
     logging.info(f"connectionInfo: {connectionInfo}")
     return func.HttpResponse(connectionInfo)
 
-@app.function_name(name="send_status")
-@app.route(route="send_status", auth_level=func.AuthLevel.ANONYMOUS)
+@app.function_name(name="send-status")
+@app.route(route="send-status", auth_level=func.AuthLevel.ANONYMOUS)
 @app.generic_output_binding(
     arg_name="signalRMessages", 
     type="signalR", 
@@ -49,8 +49,8 @@ def send_status(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     }))
     return "ok"
 
-@app.function_name(name="mock_query")
-@app.route(route="mock_query", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
+@app.function_name(name="mock-query")
+@app.route(route="mock-query", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_output_binding(
     arg_name="signalRMessages", 
     type="signalR", hubName="bdotstsignal", 
@@ -85,7 +85,7 @@ def mock_query(req: func.HttpRequest, signalRMessages: func.Out[str]) -> str:
     }))
     return "Query complete"
 
-@app.function_name(name="send_to_user")
+@app.function_name(name="send-to-user")
 @app.route(route="send-to-user", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
 @app.generic_output_binding(
     arg_name="signalRMessages",
@@ -116,6 +116,7 @@ def posts_query(req: func.HttpRequest, outputDocument: func.Out[func.Document]) 
     req_body = req.get_json()
     userId = req_body.get('userId')
     query = req_body.get('query')
+    password = req_body.get('password')
     docId = uuid.uuid4()
     str_doc_id = docId.hex
 
@@ -138,7 +139,7 @@ def posts_query(req: func.HttpRequest, outputDocument: func.Out[func.Document]) 
     results = search_client.search(search_text=query, top=1)
 
     for result in results:
-        encoded_path = result['metadata_storage_path']
+        encoded_path = result['metadata_storage_path'] # Id of document within data lake
         logging.info(f"Content: {result['content']}")
         json_content_data = json.dumps({
             'status': result['content']

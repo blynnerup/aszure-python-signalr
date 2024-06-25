@@ -3,82 +3,86 @@
 <body>
   <style>
     .search-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 50px;
-}
-.search-box {
-    width: 300px;
-    padding: 10px;
-    font-size: 16px;
-}
-.search-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    margin-left: 10px;
-    cursor: pointer;
-}
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 50px;
+    }
+
+    .search-box,
+    .password-box {
+      width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .search-button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
   </style>
   <h1>Azure SignalR Serverless Sample</h1>
   <div class="search-container">
     <input type="text" class="search-box" id="searchBox" placeholder="Type your search query here...">
+    <input type="password" class="password-box" id="passwordBox" placeholder="Enter your password...">
     <button class="search-button" onclick="submitSearch()">Search</button>
-</div>
+  </div>
   <div id="messages"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
-  <!-- <script src="index.js"></script>
-  <link rel="stylesheet" href="index.css"> -->
   <script>
     let messages = document.querySelector('#messages');
     const apiBaseUrl = window.location.origin;
     console.log(apiBaseUrl)
     const connection = new signalR.HubConnectionBuilder()
-        .withUrl(apiBaseUrl + '/api')
-        .configureLogging(signalR.LogLevel.Information)
-        .build();
-      connection.on('newMessage', (message) => {
-        document.getElementById("messages").innerHTML = message;
-      });
+      .withUrl(apiBaseUrl + '/api')
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+    connection.on('newMessage', (message) => {
+      document.getElementById("messages").innerHTML = message;
+    });
 
-      connection.start()
-        .catch(console.error);
+    connection.start()
+      .catch(console.error);
 
-        function submitSearch() {
-    var query = document.getElementById('searchBox').value;
+    function submitSearch() {
+      var query = document.getElementById('searchBox').value;
 
-    // Validate the input
-    if (query.trim() === "") {
+      // Validate the input
+      if (query.trim() === "") {
         alert("Please enter a search query.");
         return;
-    }
+      }
 
-    // Dummy userId, replace this with the actual userId as needed
-    var userId = "12345"; // Replace with dynamic user ID if available
+      // Dummy userId, replace this with the actual userId as needed
+      var userId = "12345"; // Replace with dynamic user ID if available
 
-    // AJAX request to Azure Function App
-    var xhr = new XMLHttpRequest();
-    var url = apiBaseUrl + "/api/post-query"; 
-    xhr.open("POST", url, true);
-    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+      // AJAX request to Azure Function App
+      var xhr = new XMLHttpRequest();
+      var url = apiBaseUrl + "/api/post-query";
+      console.log("URL:" + url)
+      xhr.open("POST", url, true);
+      xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 
-    xhr.onreadystatechange = function () {
+      xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            // Handle the response from the Azure Function App
-            var response = JSON.parse(xhr.responseText);
-            console.log(response);
-            alert("Search result: " + response.result); // Customize this according to your response structure
+          // Handle the response from the Azure Function App
+          var response = JSON.parse(xhr.responseText);
+          console.log(response);
+          alert("Search result: " + response.result); // Customize this according to your response structure
         } else if (xhr.readyState === 4) {
-            // Handle errors
-            console.error("Error: " + xhr.statusText);
-            alert("An error occurred while processing your request.");
+          // Handle errors
+          console.error("Error: " + xhr.statusText);
+          alert("An error occurred while processing your request.");
         }
-    };
+      };
 
-    // Send the request with the userId and query as a JSON payload
-    var data = JSON.stringify({ userId: userId, query: query });
-    xhr.send(data);
-}
+      // Send the request with the userId and query as a JSON payload
+      var data = JSON.stringify({ userId: userId, query: query});
+      xhr.send(data);
+    }
   </script>
 </body>
 

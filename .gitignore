@@ -183,3 +183,4 @@ release
 querydb*.json
 
 local.settings.json
+local.settings.backup.json
